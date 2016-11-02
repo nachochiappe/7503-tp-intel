@@ -122,7 +122,7 @@ leerRegistro:
 	;8. ¿El resto de la división es 0?
 	cmp		dx,0
 		;8.1 SI: El anio NO es bisiesto.
-	je		fin
+	je		buscoMes
 		;8.2 NO: Seguir con punto 9.
 	;9. ¿Es la primera división?
 		;9.1 SI: Dividir <anio> por 4. Seguir con punto 8.
@@ -145,8 +145,8 @@ buscoMes:
 	jle		encontreMes
 		;12.2 NO: Seguir con punto 13.
 	;13. Le resto <cant_dias> a <dia>.
-	mov		al,[cant_dias]
-	sub		[dia],al
+	mov		ax,[cant_dias]
+	sub		[dia],ax
 	;14. Le sumo 1 a <cant_meses>.
 	add		byte[cant_meses],1
 	;15. ¿<cant_meses> es igual a 2?
