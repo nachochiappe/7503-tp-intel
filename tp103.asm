@@ -2,9 +2,9 @@ segment datos data
 	anio_inicial	dw	1900
 	febrero			db	28
 	cant_dias		db	31
-	cant_meses	db	1
+	cant_meses		db	1
 	nom_arch		db	"juliana.txt",0
-	centena			db	100
+	centena			dw	100
 	decena			db	10
 
 	registro	times 15	resb	1
@@ -19,12 +19,17 @@ segment datos data
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
-	msjFin				db	"FIN$"
+	msjFin			db	"FIN$"
+	msjTest1		db	"TEST1",10,13,"$"
+	msjTest2		db	"TEST2",10,13,"$"
+	msjTest3		db	"TEST3",10,13,"$"
+	msjTest4		db	"TEST4",10,13,"$"
+	msjTest5		db	"TEST5",10,13,"$"
 
 	msjJuliana		db	"Juliana: $"
 	msjGregoriana	db	"Gregoriana: $"
 
-	fechaJuliana		resb	7
+	fechaJuliana	resb	7
 	fechaGregoriana	resb	9
 
 	;Juliana: AADDDD (Ej.: 31/05/1950 -> 500151 (Día 151 del año 1950))
@@ -121,23 +126,58 @@ abrirFile:
 		;8.2 NO: Seguir con punto 9.
 	;9. ¿Es la primera división?
 		;9.1 SI: Dividir <anio> por 4. Seguir con punto 8.
+	mov		ax,[anio]
+	;mov		bx,4
+	;div		bx
+	div		word[4]
 		;9.2 NO: Saltar a punto 12.
 	;10. Saltar a punto 8.
+	;Temporalmente hago esto hasta completar punto 9
+	cmp		dx,0
+	je		fin
 	;11. Asignar 29 a <febrero>.
+	mov		byte[febrero],29
 	;12. ¿El <dia> es menor o igual a <cant_dias>?
-		;12.1 SI: El número de mes es <cant_meses>. Saltar a punto 15.
-		;12.2 NO: Seguir con punto 9.
+buscoMes:
+	mov		bx,[dia]
+	cmp		bx,[cant_dias]
+		;12.1 SI: El número de mes es <cant_meses>. Saltar a punto 19.
+	jle		encontreMes
+		;12.2 NO: Seguir con punto 13.
 	;13. Le resto <cant_dias> a <dia>.
+	mov		al,[cant_dias]
+	sub		[dia],al
 	;14. Le sumo 1 a <cant_meses>.
+	add		byte[cant_meses],1
 	;15. ¿<cant_meses> es igual a 2?
-		;15.1 Le asigno <diasfebrero> a <cant_dias>.
-		;15.2 Seguir con punto 12.
+	cmp		byte[cant_meses],2
+		;15.1 SI: Le asigno <febrero> a <cant_dias>.
+	jne		noFebrero
+	mov		al,[febrero]
+	mov		byte[cant_dias],al
+	jmp		buscoMes
+		;15.2 NO: Seguir con punto 12.
+noFebrero:
+	mov		dx,msjTest1
+	call	mostrarMsj
+	jmp		buscoMes
 	;16. Divido <cant_meses> por 2.
+	mov		bl,2
+	mov		ax,[cant_meses]
+	div		bl
 	;17. ¿El resto es 0?
+	cmp		ah,0
 		;17.1 SI: Es un mes par. Le asigno 30 a <cant_dias>.
+	je		esMesPar
 		;17.2 NO: Es un mes impar. Le asigno 31 a <cant_dias>.
-	;18. Seguir con punto 8.
+	mov		byte[cant_dias],31
+	jmp		buscoMes
+esMesPar:
+	mov		byte[cant_dias],30
+	;18. Seguir con punto 12.
+	jmp		buscoMes
 	;19. Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
+encontreMes:
 	;20. Mostrar por pantalla:
 		;Juliana: AADDDD
 		;Gregoriana: AAAAMMDD
@@ -190,9 +230,9 @@ errLeer:
 
 cerrarArch:
 	mov		bx,[fHandle]	;handle del archivo
-	mov		ah,3eh				;servicio
-	int		21h						;se cierra
-	jc		errCerrar			;Carry <> 0
+	mov		ah,3eh			;servicio
+	int		21h				;se cierra
+	jc		errCerrar		;Carry <> 0
 	jmp		fin
 
 errCerrar:
