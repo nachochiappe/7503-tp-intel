@@ -27,10 +27,10 @@ segment datos data
 	msjTest5		db	"TEST5",10,13,"$"
 
 	msjJuliana		db	"Juliana: $"
-	msjGregoriana	db	"Gregoriana: ",10,13,"$"
+	msjGregoriana	db	"Gregoriana: $"
 
-	fechaJuliana	resb	7
-	fechaGregoriana	resb	9
+	fechaJuliana	resb	9
+	fechaGregoriana	resb	11
 
 	;Juliana: AADDDD (Ej.: 31/05/1950 -> 500151 (Día 151 del año 1950))
 	;Gregoriana: AAAAMMDD (Ej.: 31/05/1950 -> 19500531)
@@ -200,14 +200,34 @@ encontreMes:
 	mov		byte[fechaJuliana+6],10
 	mov		byte[fechaJuliana+7],13
 	mov		byte[fechaJuliana+8],'$'
-
+	
 	;Muestro la fecha Juliana
 	mov		dx,msjJuliana
 	call	mostrarMsj
 	mov		dx,fechaJuliana
 	call	mostrarMsj
 
+	;Armo fecha Gregoriana con formato AAAAMMDD
+	mov		ax,byte[anio]
+	add		ax,3030h
+	mov		[fechaGregoriana],ax
+	mov		ax,byte[anio+2]
+	add		ax,3030h
+	mov		[fechaGregoriana+2],ax
+	mov		ax,[cant_meses]
+	add		ax,3030h
+	mov		[fechaGregoriana+4],ax
+	mov		ax,[dia]
+	add		ax,3030h
+	mov		[fechaGregoriana+6],ax
+	mov		byte[fechaGregoriana+8],10
+	mov		byte[fechaGregoriana+9],13
+	mov		byte[fechaGregoriana+10],'$'
+	
+	;Muestro la fecha Gregoriana
 	mov		dx,msjGregoriana
+	call	mostrarMsj
+	mov		dx,fechaGregoriana
 	call	mostrarMsj
 
 	;21. Seguir con punto 3.
