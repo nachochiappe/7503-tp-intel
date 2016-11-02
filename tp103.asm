@@ -1,7 +1,7 @@
 segment datos data
 	anio_inicial	dw	1900
 	febrero			db	28
-	cant_dias		db	31
+	cant_dias		dw	31
 	cant_meses		db	1
 	nom_arch		db	"juliana.txt",0
 	centena			dw	100
@@ -27,7 +27,7 @@ segment datos data
 	msjTest5		db	"TEST5",10,13,"$"
 
 	msjJuliana		db	"Juliana: $"
-	msjGregoriana	db	"Gregoriana: $"
+	msjGregoriana	db	"Gregoriana: ",10,13,"$"
 
 	fechaJuliana	resb	7
 	fechaGregoriana	resb	9
@@ -61,7 +61,7 @@ abrirFile:
 		;2.1	SI: Saltar a fin.
 		;2.2	NO: Seguir con punto 3.
 	;3.	Leer registro
-
+leerRegistro:
 	mov		bx,[fHandle]	;handle del archivo
 	mov		cx,12					;cantidad de bytes a leer
 	mov		dx,registro		;memoria hacia donde se copia
@@ -95,22 +95,22 @@ abrirFile:
 	add		[anio],ax
 
 	;6. Obtener <dia>
-
+	sub		ax,ax
 	;Centena
 	mov		al,byte[registro+8]
-	sub		al,30
+	sub		al,30h
 	mul		byte[centena]
 	mov		[dia],ax
 
 	;Decena
 	mov		al,byte[registro+9]
-	sub		al,30
+	sub		al,30h
 	mul		byte[decena]
 	add		[dia],ax
 
 	;Unidad
 	mov		al,byte[registro+10]
-	sub		al,30
+	sub		al,30h
 	add		[dia],al
 
 	;7. Dividir <anio> por 100.
@@ -127,7 +127,7 @@ abrirFile:
 	;9. ¿Es la primera división?
 		;9.1 SI: Dividir <anio> por 4. Seguir con punto 8.
 	mov		ax,[anio]
-	;mov		bx,4
+	;mov		bx,4	con esto me da "Divide overflow"
 	;div		bx
 	div		word[4]
 		;9.2 NO: Saltar a punto 12.
@@ -152,15 +152,11 @@ buscoMes:
 	;15. ¿<cant_meses> es igual a 2?
 	cmp		byte[cant_meses],2
 		;15.1 SI: Le asigno <febrero> a <cant_dias>.
-	jne		noFebrero
+	jne		buscoMes
 	mov		al,[febrero]
 	mov		byte[cant_dias],al
 	jmp		buscoMes
 		;15.2 NO: Seguir con punto 12.
-noFebrero:
-	mov		dx,msjTest1
-	call	mostrarMsj
-	jmp		buscoMes
 	;16. Divido <cant_meses> por 2.
 	mov		bl,2
 	mov		ax,[cant_meses]
@@ -215,8 +211,8 @@ encontreMes:
 	call	mostrarMsj
 
 	;21. Seguir con punto 3.
+	jmp		leerRegistro
 	;22. Cerrar archivo.
-	jmp		cerrarArch
 
 errAbrir:
 	mov		dx,msjErrAbrir
