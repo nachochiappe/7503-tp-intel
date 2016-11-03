@@ -111,7 +111,8 @@ leerRegistro:
 	;Dividir <anio> por 4.
 	sub		dx,dx
 	mov		ax,[anio]
-	div		word[4]
+	mov		bx,4
+	div		bx
 	;¿El resto de la división es 0?
 	cmp		dx,0
 		;SI: El anio es bisiesto.
@@ -119,11 +120,13 @@ leerRegistro:
 		;NO: Seguir.
 	;Dividir <anio> por 100.
 	mov		ax,[anio]
-	div		word[100]
+	mov		bx,100
+	div		bx
 	cmp		dx,0
 	jne		buscoMes
 	mov		ax,[anio]
-	div		word[400]
+	mov		bx,400
+	div		bx
 	cmp		dx,0
 	jne		buscoMes
 esBisiesto:
@@ -133,14 +136,15 @@ buscoMes:
 	;¿El <dia> es menor o igual a <cant_dias>?
 	mov		bx,[dia]
 	cmp		bx,[cant_dias]
-		;SI: El número de mes es <cant_meses>. Saltar a punto 19.
+		;SI: El número de mes es <cant_meses>. Saltar a encontreMes.
 	jle		encontreMes
-		;NO: Seguir con punto 13.
+		;NO: Seguir.
 	;Le resto <cant_dias> a <dia>.
 	mov		ax,[cant_dias]
 	sub		[dia],ax
 	;Le sumo 1 a <cant_meses>.
 	inc		byte[cant_meses]
+	mov		ax,[cant_meses]
 	;¿<cant_meses> es igual a 2?
 	cmp		byte[cant_meses],2
 		;SI: Le asigno <febrero> a <cant_dias>.
@@ -148,22 +152,35 @@ buscoMes:
 	mov		al,[febrero]
 	mov		byte[cant_dias],al
 	jmp		buscoMes
-		;NO: Seguir con punto 12.
+		;NO: Seguir.
 	;Divido <cant_meses> por 2.
 noFebrero:
+	cmp		byte[cant_meses],8
+	jge		segundaMitad
 	mov		bl,2
 	mov		ax,[cant_meses]
 	div		bl
 	;¿El resto es 0?
 	cmp		ah,0
-		;SI: Es un mes par. Le asigno 30 a <cant_dias>.
-	je		esMesPar
-		;NO: Es un mes impar. Le asigno 31 a <cant_dias>.
-	mov		byte[cant_dias],31
-	jmp		buscoMes
-esMesPar:
+		;SI: Le asigno 30 a <cant_dias>.
+	je		esTreinta
+		;NO: Le asigno 31 a <cant_dias>.
+	jmp		esTreintaUno
+segundaMitad:
+	mov		bl,2
+	mov		ax,[cant_meses]
+	div		bl
+	;¿El resto es 0?
+	cmp		ah,0
+		;SI: Le asigno 31 a <cant_dias>.
+	je		esTreintaUno
+		;NO: Le asigno 30 a <cant_dias>.
+esTreinta:
 	mov		byte[cant_dias],30
-	;Seguir con punto 12.
+	;Seguir con buscoMes.
+	jmp		buscoMes
+esTreintaUno:
+	mov		byte[cant_dias],31
 	jmp		buscoMes
 	;Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
 encontreMes:
