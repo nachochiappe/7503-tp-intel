@@ -6,6 +6,7 @@ segment datos data
 	nom_arch		db	"juliana.txt",0
 	centena			dw	100
 	decena			db	10
+	diez				dw  10
 
 	registro	times 15	resb	1
 	dia				resw	1
@@ -20,17 +21,13 @@ segment datos data
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
 	msjFin			db	"FIN$"
-	msjTest1		db	"TEST1",10,13,"$"
-	msjTest2		db	"TEST2",10,13,"$"
-	msjTest3		db	"TEST3",10,13,"$"
-	msjTest4		db	"TEST4",10,13,"$"
-	msjTest5		db	"TEST5",10,13,"$"
 
 	msjJuliana		db	"Juliana: $"
 	msjGregoriana	db	"Gregoriana: $"
 
 	fechaJuliana	resb	9
-	fechaGregoriana	resb	11
+	fechaGregoriana	times 8	db '0'
+  				db'$' ;para agregar el fin de string para imprimir por pantalla
 
 	;Juliana: AADDDD (Ej.: 31/05/1950 -> 500151 (Día 151 del año 1950))
 	;Gregoriana: AAAAMMDD (Ej.: 31/05/1950 -> 19500531)
@@ -148,16 +145,18 @@ buscoMes:
 	mov		ax,[cant_dias]
 	sub		[dia],ax
 	;14. Le sumo 1 a <cant_meses>.
-	add		byte[cant_meses],1
+	inc		byte[cant_meses]
+	mov		ax,[cant_meses] ;esto es TEST
 	;15. ¿<cant_meses> es igual a 2?
 	cmp		byte[cant_meses],2
 		;15.1 SI: Le asigno <febrero> a <cant_dias>.
-	jne		buscoMes
+	jne		noFebrero
 	mov		al,[febrero]
 	mov		byte[cant_dias],al
 	jmp		buscoMes
 		;15.2 NO: Seguir con punto 12.
 	;16. Divido <cant_meses> por 2.
+noFebrero:
 	mov		bl,2
 	mov		ax,[cant_meses]
 	div		bl
@@ -200,30 +199,36 @@ encontreMes:
 	mov		byte[fechaJuliana+6],10
 	mov		byte[fechaJuliana+7],13
 	mov		byte[fechaJuliana+8],'$'
-	
+
+	;Armo fecha Gregoriana con formato AAAAMMDD
+	mov  dx,0			;pongo en 0 DX para la dupla DX:AX
+	mov  ax,[anio]	;copio el nro en AX para divisiones sucesivas
+	mov  si,7			;'SI' apunta al ultimo byte de la cadena
+
+otraDiv:
+	div  word[diez]			;DX:AX div 10 ==> DX <- resto & AX <- cociente
+	add  dx,30h					;convierto a ASCII el resto
+	mov  [fechaGregoriana+si],dl	;lo pongo en la posicion anterior
+	sub  si,1						;posiciono SI en el caracter anterior en la cadena
+	cmp  ax,[diez]			;IF cociente < 10
+	jl   finDiv					;THEN fin division
+	mov  dx,0						;pongo en 0 DX para la dupla DX:AX
+	jmp  otraDiv
+
+finDiv:
+	add  ax,30h
+	mov  [fechaGregoriana+si],al
+	mov		byte[fechaGregoriana+8],10
+	mov		byte[fechaGregoriana+9],13
+	mov		byte[fechaGregoriana+10],'$'
+
+mostrarFechas:
 	;Muestro la fecha Juliana
 	mov		dx,msjJuliana
 	call	mostrarMsj
 	mov		dx,fechaJuliana
 	call	mostrarMsj
 
-	;Armo fecha Gregoriana con formato AAAAMMDD
-	mov		ax,byte[anio]
-	add		ax,3030h
-	mov		[fechaGregoriana],ax
-	mov		ax,byte[anio+2]
-	add		ax,3030h
-	mov		[fechaGregoriana+2],ax
-	mov		ax,[cant_meses]
-	add		ax,3030h
-	mov		[fechaGregoriana+4],ax
-	mov		ax,[dia]
-	add		ax,3030h
-	mov		[fechaGregoriana+6],ax
-	mov		byte[fechaGregoriana+8],10
-	mov		byte[fechaGregoriana+9],13
-	mov		byte[fechaGregoriana+10],'$'
-	
 	;Muestro la fecha Gregoriana
 	mov		dx,msjGregoriana
 	call	mostrarMsj
