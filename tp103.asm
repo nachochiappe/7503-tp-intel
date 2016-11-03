@@ -56,6 +56,9 @@ abrirFile:
 
 	;Leer registro
 leerRegistro:
+	mov		byte[febrero],28		;vuelvo la variable a su valor inicial
+	mov		byte[cant_meses],1	;vuelvo la variable a su valor inicial
+	mov		byte[cant_dias],31	;vuelvo la variable a su valor inicial
 	mov		bx,[fHandle]	;handle del archivo
 	mov		cx,12					;cantidad de bytes a leer
 	mov		dx,registro		;memoria hacia donde se copia
@@ -192,23 +195,40 @@ encontreMes:
 	mov		byte[fechaJuliana+8],'$'
 
 	;Armo fecha Gregoriana con formato AAAAMMDD
-	mov  dx,0			;pongo en 0 DX para la dupla DX:AX
-	mov  ax,[dia]	;copio el nro en AX para divisiones sucesivas
-	mov  si,7			;'SI' apunta al ultimo byte de la cadena
+	sub		bl,bl
+armoFecha:
+	mov		dx,0			;pongo en 0 DX para la dupla DX:AX
+	cmp		bl,1
+	jne		armoMes
+	mov		ax,[anio]	;copio el nro en AX para divisiones sucesivas
+	mov		si,3			;'SI' apunta al ultimo byte de la cadena
+	jmp		otraDiv
+armoMes:
+	cmp		bl,2
+	jne		armoDia
+	mov		ax,[cant_meses]
+	mov		si,5
+	jmp		otraDiv
+armoDia:
+	mov		ax,[dia]
+	mov		si,7
 
 otraDiv:
-	div  word[diez]			;DX:AX div 10 ==> DX <- resto & AX <- cociente
-	add  dx,30h					;convierto a ASCII el resto
-	mov  [fechaGregoriana+si],dl	;lo pongo en la posicion anterior
-	sub  si,1						;posiciono SI en el caracter anterior en la cadena
-	cmp  ax,[diez]			;IF cociente < 10
-	jl   finDiv					;THEN fin division
-	mov  dx,0						;pongo en 0 DX para la dupla DX:AX
-	jmp  otraDiv
+	div		word[diez]			;DX:AX div 10 ==> DX <- resto & AX <- cociente
+	add		dx,30h					;convierto a ASCII el resto
+	mov		[fechaGregoriana+si],dl	;lo pongo en la posicion anterior
+	sub		si,1						;posiciono SI en el caracter anterior en la cadena
+	cmp		ax,[diez]				;SI cociente < 10
+	jl		finDiv					;ENTONCES fin division
+	mov		dx,0						;pongo en 0 DX para la dupla DX:AX
+	jmp		otraDiv
 
 finDiv:
-	add  ax,30h
-	mov  [fechaGregoriana+si],al
+	add		ax,30h
+	mov		[fechaGregoriana+si],al
+	inc		bl
+	cmp		bl,3
+	jne		armoFecha
 	mov		byte[fechaGregoriana+8],10
 	mov		byte[fechaGregoriana+9],13
 	mov		byte[fechaGregoriana+10],'$'
