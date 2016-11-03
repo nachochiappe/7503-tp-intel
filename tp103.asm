@@ -2,7 +2,7 @@ segment datos data
 	anio_inicial	dw	1900
 	febrero			db	28
 	cant_dias		dw	31
-	cant_meses		db	1
+	cant_meses		dw	1
 	nom_arch		db	"juliana.txt",0
 	centena			dw	100
 	decena			db	10
@@ -45,7 +45,7 @@ segment codigo code
 	mov		ss,ax			;se copia al registro SS la dirección del segmento STACK
 	mov		sp,stacktop
 
-	;1.	Abrir archivo
+	;Abrir archivo
 abrirFile:
 	mov		al,0					;tipo de acceso
 	mov		dx,nom_arch		;nombre del archivo
@@ -54,10 +54,7 @@ abrirFile:
 	jc		errAbrir			;Carry <> 0
 	mov 	[fHandle],ax	;en ax queda el handle del archivo
 
-	;2.	¿Está vacío?
-		;2.1	SI: Saltar a fin.
-		;2.2	NO: Seguir con punto 3.
-	;3.	Leer registro
+	;Leer registro
 leerRegistro:
 	mov		bx,[fHandle]	;handle del archivo
 	mov		cx,12					;cantidad de bytes a leer
@@ -67,10 +64,7 @@ leerRegistro:
 	jc		errLeer				;Carry <> 0
 	cmp		ax,0
 	je		cerrarArch
-	;4. ¿Es el fin del archivo?
-		;4.1	SI: Saltar a punto 18.
-		;4.2	NO: Seguir con punto 5.
-	;5. Obtener <anio>
+	;Obtener <anio>
 	;Centena
 	mov		al,byte[registro]
 	sub		al,30h
@@ -91,7 +85,7 @@ leerRegistro:
 	mov		ax,[anio_inicial]
 	add		[anio],ax
 
-	;6. Obtener <dia>
+	;Obtener <dia>
 	sub		ax,ax
 	;Centena
 	mov		al,byte[registro+8]
@@ -110,70 +104,67 @@ leerRegistro:
 	sub		al,30h
 	add		[dia],al
 
-	;7. Dividir <anio> por 100.
-
+	;Verifico si es bisiesto
+	;Dividir <anio> por 4.
 	sub		dx,dx
 	mov		ax,[anio]
-	div		word[centena]
-
-	;8. ¿El resto de la división es 0?
-	cmp		dx,0
-		;8.1 SI: El anio NO es bisiesto.
-	je		buscoMes
-		;8.2 NO: Seguir con punto 9.
-	;9. ¿Es la primera división?
-		;9.1 SI: Dividir <anio> por 4. Seguir con punto 8.
-	mov		ax,[anio]
-	;mov		bx,4	con esto me da "Divide overflow"
-	;div		bx
 	div		word[4]
-		;9.2 NO: Saltar a punto 12.
-	;10. Saltar a punto 8.
-	;Temporalmente hago esto hasta completar punto 9
+	;¿El resto de la división es 0?
 	cmp		dx,0
-	je		fin
-	;11. Asignar 29 a <febrero>.
+		;SI: El anio es bisiesto.
+	je		esBisiesto
+		;NO: Seguir.
+	;Dividir <anio> por 100.
+	mov		ax,[anio]
+	div		word[100]
+	cmp		dx,0
+	jne		buscoMes
+	mov		ax,[anio]
+	div		word[400]
+	cmp		dx,0
+	jne		buscoMes
+esBisiesto:
+	;Asignar 29 a <febrero>.
 	mov		byte[febrero],29
-	;12. ¿El <dia> es menor o igual a <cant_dias>?
 buscoMes:
+	;¿El <dia> es menor o igual a <cant_dias>?
 	mov		bx,[dia]
 	cmp		bx,[cant_dias]
-		;12.1 SI: El número de mes es <cant_meses>. Saltar a punto 19.
+		;SI: El número de mes es <cant_meses>. Saltar a punto 19.
 	jle		encontreMes
-		;12.2 NO: Seguir con punto 13.
-	;13. Le resto <cant_dias> a <dia>.
+		;NO: Seguir con punto 13.
+	;Le resto <cant_dias> a <dia>.
 	mov		ax,[cant_dias]
 	sub		[dia],ax
-	;14. Le sumo 1 a <cant_meses>.
+	;Le sumo 1 a <cant_meses>.
 	inc		byte[cant_meses]
-	mov		ax,[cant_meses] ;esto es TEST
-	;15. ¿<cant_meses> es igual a 2?
+	;¿<cant_meses> es igual a 2?
 	cmp		byte[cant_meses],2
-		;15.1 SI: Le asigno <febrero> a <cant_dias>.
+		;SI: Le asigno <febrero> a <cant_dias>.
 	jne		noFebrero
 	mov		al,[febrero]
 	mov		byte[cant_dias],al
 	jmp		buscoMes
-		;15.2 NO: Seguir con punto 12.
-	;16. Divido <cant_meses> por 2.
+		;NO: Seguir con punto 12.
+	;Divido <cant_meses> por 2.
 noFebrero:
 	mov		bl,2
 	mov		ax,[cant_meses]
 	div		bl
-	;17. ¿El resto es 0?
+	;¿El resto es 0?
 	cmp		ah,0
-		;17.1 SI: Es un mes par. Le asigno 30 a <cant_dias>.
+		;SI: Es un mes par. Le asigno 30 a <cant_dias>.
 	je		esMesPar
-		;17.2 NO: Es un mes impar. Le asigno 31 a <cant_dias>.
+		;NO: Es un mes impar. Le asigno 31 a <cant_dias>.
 	mov		byte[cant_dias],31
 	jmp		buscoMes
 esMesPar:
 	mov		byte[cant_dias],30
-	;18. Seguir con punto 12.
+	;Seguir con punto 12.
 	jmp		buscoMes
-	;19. Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
+	;Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
 encontreMes:
-	;20. Mostrar por pantalla:
+	;Mostrar por pantalla:
 		;Juliana: AADDDD
 		;Gregoriana: AAAAMMDD
 	;Muestro registro actual (NO TIENE QUE ESTAR EN LA VERSIÓN FINAL)
@@ -202,7 +193,7 @@ encontreMes:
 
 	;Armo fecha Gregoriana con formato AAAAMMDD
 	mov  dx,0			;pongo en 0 DX para la dupla DX:AX
-	mov  ax,[anio]	;copio el nro en AX para divisiones sucesivas
+	mov  ax,[dia]	;copio el nro en AX para divisiones sucesivas
 	mov  si,7			;'SI' apunta al ultimo byte de la cadena
 
 otraDiv:
@@ -235,9 +226,8 @@ mostrarFechas:
 	mov		dx,fechaGregoriana
 	call	mostrarMsj
 
-	;21. Seguir con punto 3.
+	;Seguir con punto 3.
 	jmp		leerRegistro
-	;22. Cerrar archivo.
 
 errAbrir:
 	mov		dx,msjErrAbrir
