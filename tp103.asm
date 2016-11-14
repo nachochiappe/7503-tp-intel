@@ -6,8 +6,7 @@ segment datos data
 	nom_arch		db	"juliana.txt",0
 	centena			dw	100
 	decena			db	10
-	diez				dw  10
-	tabLetraPack	db	"CAFEBD"
+	diez			dw  10
 
 	registro	times 15	resb	1
 	dia				resw	1
@@ -70,22 +69,21 @@ leerRegistro:
 	cmp		ax,0
 	je		cerrarArch
 	
-	;Verifico letra de empaquetado
+	;Verifico letras de empaquetado
 	mov		cx,2
-	mov		si,0
 leerLetraUno:
 	mov		al,byte[registro+3]
 	jmp		verificarLetra
 leerLetraDos:
 	mov		al,byte[registro+11]
-	mov		si,0
 verificarLetra:
-	cmp		al,byte[tabLetraPack+si]
-	je		letraValida
-	inc		si
-	cmp		si,5
-	jle		verificarLetra
+	cmp		al,41h
+	jl		letraNoValida
+	cmp		al,46h
+	jle		letraValida
 letraNoValida:
+	mov		dx,registro
+	call	mostrarMsj
 	mov		dx,msjErrLetra
 	call	mostrarMsj
 	jmp		leerRegistro
