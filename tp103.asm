@@ -7,6 +7,7 @@ segment datos data
 	centena			dw	100
 	decena			db	10
 	diez				dw  10
+	tabLetraPack	db	"CAFEBD"
 
 	registro	times 15	resb	1
 	dia				resw	1
@@ -20,6 +21,7 @@ segment datos data
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
+	msjErrLetra		db	"Registro no es un empaquetado valido",10,13,"$"
 	msjFin			db	"FIN$"
 
 	msjJuliana		db	"Juliana: $"
@@ -67,6 +69,28 @@ leerRegistro:
 	jc		errLeer				;Carry <> 0
 	cmp		ax,0
 	je		cerrarArch
+	
+	;Verifico letra de empaquetado
+	mov		cx,2
+	mov		si,0
+leerLetraUno:
+	mov		al,byte[registro+3]
+	jmp		verificarLetra
+leerLetraDos:
+	mov		al,byte[registro+11]
+	mov		si,0
+verificarLetra:
+	cmp		al,byte[tabLetraPack+si]
+	je		letraValida
+	inc		si
+	cmp		si,5
+	jle		verificarLetra
+letraNoValida:
+	mov		dx,msjErrLetra
+	call	mostrarMsj
+	jmp		leerRegistro
+letraValida:
+	loop	leerLetraDos
 	;Obtener <anio>
 	;Centena
 	mov		al,byte[registro]
