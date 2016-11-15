@@ -1,3 +1,12 @@
+;*********************************************************************;
+;      	           75.03 ORGANIZACION DEL COMPUTADOR                  ;
+;                                                                     ;
+; ALUMNO: Ignacio Chiappe                                             ;
+; PADRON: 90340                                                       ;
+; TP: 103 Intel 80x86 - Conversor de fechas (II)                      ;
+;                                                                     ;
+;*********************************************************************;
+
 segment datos data
 	anio_inicial	dw	1900
 	febrero			db	28
@@ -20,7 +29,7 @@ segment datos data
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
-	msjErrLetra		db	"Registro no es un empaquetado valido",10,13,"$"
+	msjErrEmpaq		db	"Registro no es un empaquetado valido",10,13,"$"
 	msjFin			db	"FIN$"
 
 	msjJuliana		db	"Juliana: $"
@@ -48,47 +57,45 @@ segment codigo code
 
 	;Abrir archivo
 abrirFile:
-	mov		al,0					;tipo de acceso
+	mov		al,0			;tipo de acceso
 	mov		dx,nom_arch		;nombre del archivo
-	mov		ah,3dh				;servicio para abrir archivo 3dh
-	int		21h						;se abre el archivo
-	jc		errAbrir			;Carry <> 0
+	mov		ah,3dh			;servicio para abrir archivo 3dh
+	int		21h				;se abre el archivo
+	jc		errAbrir		;Carry <> 0
 	mov 	[fHandle],ax	;en ax queda el handle del archivo
 
 	;Leer registro
 leerRegistro:
-	mov		byte[febrero],28		;vuelvo la variable a su valor inicial
+	mov		byte[febrero],28	;vuelvo la variable a su valor inicial
 	mov		byte[cant_meses],1	;vuelvo la variable a su valor inicial
 	mov		byte[cant_dias],31	;vuelvo la variable a su valor inicial
-	mov		bx,[fHandle]	;handle del archivo
-	mov		cx,12					;cantidad de bytes a leer
-	mov		dx,registro		;memoria hacia donde se copia
+	mov		bx,[fHandle]		;handle del archivo
+	mov		cx,12				;cantidad de bytes a leer
+	mov		dx,registro			;memoria hacia donde se copia
 	mov		ah,3fh				;servicio
-	int		21h						;se lee
+	int		21h					;se lee
 	jc		errLeer				;Carry <> 0
 	cmp		ax,0
 	je		cerrarArch
 	
-	;Verifico letras de empaquetado
-	mov		cx,2
-leerLetraUno:
-	mov		al,byte[registro+3]
-	jmp		verificarLetra
-leerLetraDos:
-	mov		al,byte[registro+11]
-verificarLetra:
-	cmp		al,41h
-	jl		letraNoValida
-	cmp		al,46h
-	jle		letraValida
-letraNoValida:
-	mov		dx,registro
-	call	mostrarMsj
-	mov		dx,msjErrLetra
-	call	mostrarMsj
-	jmp		leerRegistro
-letraValida:
-	loop	leerLetraDos
+	;Valido que el registro sea válido (dos empaquetados)
+	mov		cx,12
+	mov		si,0
+validarEmpaquetado:
+	mov		al,byte[registro+si]
+	cmp		si,3
+	je		esLetra
+	cmp		si,11
+	je		esLetra
+esNumero:
+	call	validoNumero
+	jmp		sigDigito
+esLetra:
+	call	validoLetra
+sigDigito:
+	inc		si
+	loop	validarEmpaquetado
+	
 	;Obtener <anio>
 	;Centena
 	mov		al,byte[registro]
@@ -236,11 +243,11 @@ encontreMes:
 	;Armo fecha Gregoriana con formato AAAAMMDD
 	sub		bl,bl
 armoFecha:
-	mov		dx,0			;pongo en 0 DX para la dupla DX:AX
+	mov		dx,0		;pongo en 0 DX para la dupla DX:AX
 	cmp		bl,1
 	jne		armoMes
 	mov		ax,[anio]	;copio el nro en AX para divisiones sucesivas
-	mov		si,3			;'SI' apunta al ultimo byte de la cadena
+	mov		si,3		;'SI' apunta al ultimo byte de la cadena
 	jmp		otraDiv
 armoMes:
 	cmp		bl,2
@@ -253,13 +260,13 @@ armoDia:
 	mov		si,7
 
 otraDiv:
-	div		word[diez]			;DX:AX div 10 ==> DX <- resto & AX <- cociente
+	div		word[diez]				;DX:AX div 10 ==> DX <- resto & AX <- cociente
 	add		dx,30h					;convierto a ASCII el resto
 	mov		[fechaGregoriana+si],dl	;lo pongo en la posicion anterior
-	sub		si,1						;posiciono SI en el caracter anterior en la cadena
+	sub		si,1					;posiciono SI en el caracter anterior en la cadena
 	cmp		ax,[diez]				;SI cociente < 10
 	jl		finDiv					;ENTONCES fin division
-	mov		dx,0						;pongo en 0 DX para la dupla DX:AX
+	mov		dx,0					;pongo en 0 DX para la dupla DX:AX
 	jmp		otraDiv
 
 finDiv:
@@ -288,6 +295,33 @@ mostrarFechas:
 	;Seguir con punto 3.
 	jmp		leerRegistro
 
+;****************************************;
+;            RUTINAS INTERNAS            ;
+;****************************************;
+
+	;Verifico número de empaquetado
+validoNumero:
+	cmp		al,30h
+	jl		empaqNoValido
+	cmp		al,39h
+	jg		empaqNoValido
+	ret
+
+	;Verifico letra de empaquetado
+validoLetra:
+	cmp		al,41h
+	jl		empaqNoValido
+	cmp		al,46h
+	jg		empaqNoValido
+	ret
+	
+empaqNoValido:
+	mov		dx,registro
+	call	mostrarMsj
+	mov		dx,msjErrEmpaq
+	call	mostrarMsj
+	jmp		leerRegistro
+	
 errAbrir:
 	mov		dx,msjErrAbrir
 	call	mostrarMsj
