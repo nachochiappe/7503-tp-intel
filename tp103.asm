@@ -12,13 +12,14 @@ segment datos data
 	febrero			db	28
 	cant_dias		dw	31
 	cant_meses		dw	1
-	nom_arch		db	"juliana.txt",0
+	nom_arch		db	"juliana",0
 	centena			dw	100
 	decena			db	10
 	diez			dw  10
 
-	registro	times 15	resb	1
+	registro	times 6	resb	1
 	dia				resw	1
+	diaJuliano		resw	1
 	mes				resb	1
 	anio			resw	1
 
@@ -26,6 +27,8 @@ segment datos data
 
 	;Mensajes
 
+	msjAnioInvalido	db	"El anio es mayor a 99",10,13,"$"
+	msjDiaInvalido	db	"El día es mayor a 366",10,13,"$"
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
@@ -69,73 +72,71 @@ leerRegistro:
 	mov		byte[febrero],28	;vuelvo la variable a su valor inicial
 	mov		byte[cant_meses],1	;vuelvo la variable a su valor inicial
 	mov		byte[cant_dias],31	;vuelvo la variable a su valor inicial
+	mov		word[anio],0		;vuelvo la variable a su valor inicial
+	mov		byte[mes],0			;vuelvo la variable a su valor inicial
+	mov		byte[dia],0			;vuelvo la variable a su valor inicial
 	mov		bx,[fHandle]		;handle del archivo
-	mov		cx,12				;cantidad de bytes a leer
+	mov		cx,6				;cantidad de bytes a leer
 	mov		dx,registro			;memoria hacia donde se copia
 	mov		ah,3fh				;servicio
 	int		21h					;se lee
 	jc		errLeer				;Carry <> 0
 	cmp		ax,0
 	je		cerrarArch
-	
-	;Valido que el registro sea válido (dos empaquetados)
-	mov		cx,12
-	mov		si,0
-validarEmpaquetado:
-	mov		al,byte[registro+si]
-	cmp		si,3
-	je		esLetra
-	cmp		si,11
-	je		esLetra
-esNumero:
-	call	validoNumero
-	jmp		sigDigito
-esLetra:
-	call	validoLetra
-sigDigito:
-	inc		si
-	loop	validarEmpaquetado
-	
-	;Obtener <anio>
-	;Centena
-	mov		al,byte[registro]
-	sub		al,30h
-	mul		byte[centena]
-	mov		[anio],ax
 
-	;Decena
-	mov		al,byte[registro+1]
-	sub		al,30h
+	;Obtener <anio>
+	mov		al,byte[registro]
+	shl		ax,4
+	;ahora tengo en ah la centena
+	cmp		ah,0
+	jg		anioInvalido
+	sub		ah,ah
+	shr		ax,4
+	;ahora tengo en al la decena
 	mul		byte[decena]
 	add		[anio],ax
-
-	;Unidad
-	mov		al,byte[registro+2]
-	sub		al,30h
+	
+	mov		al,byte[registro+1]
+	shr		ax,4
+	;ahora tengo en al la unidad
 	add		[anio],al
 
 	mov		ax,[anio_inicial]
 	add		[anio],ax
-
+	
 	;Obtener <dia>
 	sub		ax,ax
-	;Centena
-	mov		al,byte[registro+8]
-	sub		al,30h
+	mov		ax,word[registro+2]
+	cmp		ax,0
+	jg		diaInvalido
+	
+	mov		al,byte[registro+4]
+	sub		ah,ah
+	shl		ax,4
+	xchg	ah,al
+	shr		ah,4
+	mov		bh,ah
+	;ahora tengo en al la centena
 	mul		byte[centena]
 	mov		[dia],ax
-
-	;Decena
-	mov		al,byte[registro+9]
-	sub		al,30h
+	
+	mov		al,bh
+	;ahora tengo en al la decena
 	mul		byte[decena]
 	add		[dia],ax
-
-	;Unidad
-	mov		al,byte[registro+10]
-	sub		al,30h
-	add		[dia],al
-
+	
+	mov		al,byte[registro+5]
+	sub		ah,ah
+	shl		ax,4
+	;ahora tengo en ah la unidad
+	add		[dia],ah
+	
+	;Verifico que <dia> no sea mayor a 366
+	cmp		word[dia],366
+	jg		diaInvalido
+	mov		ax,[dia]
+	mov		[diaJuliano],ax
+	
 	;Verifico si es bisiesto
 	;Dividir <anio> por 4.
 	sub		dx,dx
@@ -217,25 +218,43 @@ encontreMes:
 		;Juliana: AADDDD
 		;Gregoriana: AAAAMMDD
 	;Muestro registro actual (NO TIENE QUE ESTAR EN LA VERSIÓN FINAL)
-	mov		byte[registro+12],10
-	mov		byte[registro+13],13
-	mov		byte[registro+14],'$'
-	mov		dx,registro
-	call	mostrarMsj
+	;mov		byte[registro+12],10
+	;mov		byte[registro+13],13
+	;mov		byte[registro+14],'$'
+	;mov		dx,registro
+	;call	mostrarMsj
 
 	;Armo fecha Juliana con formato AADDDD
-	mov		ah,byte[registro+1]
-	mov		[fechaJuliana],ah
-	mov		ah,byte[registro+2]
-	mov		[fechaJuliana+1],ah
-	mov		ah,byte[registro+7]
-	mov		[fechaJuliana+2],ah
-	mov		ah,byte[registro+8]
-	mov		[fechaJuliana+3],ah
-	mov		ah,byte[registro+9]
-	mov		[fechaJuliana+4],ah
-	mov		ah,byte[registro+10]
-	mov		[fechaJuliana+5],ah
+armoFechaJul:
+	mov		dx,0		;pongo en 0 DX para la dupla DX:AX
+	cmp		bl,1
+	jne		armoDiaJul
+	mov		ax,[anio]
+	sub		ax,[anio_inicial]
+	mov		si,1
+	jmp		otraDivJul
+	
+armoDiaJul:
+	mov		ax,[diaJuliano]
+	mov		si,5
+	
+otraDivJul:
+	div		word[diez]				;DX:AX div 10 ==> DX <- resto & AX <- cociente
+	add		dx,30h					;convierto a ASCII el resto
+	mov		[fechaJuliana+si],dl	;lo pongo en la posicion anterior
+	sub		si,1					;posiciono SI en el caracter anterior en la cadena
+	cmp		ax,[diez]				;SI cociente < 10
+	jl		finDivJul				;ENTONCES fin division
+	mov		dx,0					;pongo en 0 DX para la dupla DX:AX
+	jmp		otraDivJul
+
+finDivJul:
+	add		ax,30h
+	mov		[fechaJuliana+si],al
+	inc		bl
+	cmp		bl,3
+	jne		armoFechaJul
+	mov		byte[fechaJuliana+2],30h	;este dígito siempre es 0
 	mov		byte[fechaJuliana+6],10
 	mov		byte[fechaJuliana+7],13
 	mov		byte[fechaJuliana+8],'$'
@@ -300,28 +319,38 @@ mostrarFechas:
 ;****************************************;
 
 	;Verifico número de empaquetado
-validoNumero:
-	cmp		al,30h
-	jl		empaqNoValido
-	cmp		al,39h
-	jg		empaqNoValido
-	ret
+;validoNumero:
+;	cmp		al,30h
+;	jl		empaqNoValido
+;	cmp		al,39h
+;	jg		empaqNoValido
+;	ret
+;
+;	;Verifico letra de empaquetado
+;validoLetra:
+;	cmp		al,41h
+;	jl		empaqNoValido
+;	cmp		al,46h
+;	jg		empaqNoValido
+;	ret
+;
+;empaqNoValido:
+;	mov		dx,registro
+;	call	mostrarMsj
+;	mov		dx,msjErrEmpaq
+;	call	mostrarMsj
+;	jmp		leerRegistro
 
-	;Verifico letra de empaquetado
-validoLetra:
-	cmp		al,41h
-	jl		empaqNoValido
-	cmp		al,46h
-	jg		empaqNoValido
-	ret
-	
-empaqNoValido:
-	mov		dx,registro
-	call	mostrarMsj
-	mov		dx,msjErrEmpaq
+anioInvalido:
+	mov		dx,msjAnioInvalido
 	call	mostrarMsj
 	jmp		leerRegistro
 	
+diaInvalido:
+	mov		dx,msjDiaInvalido
+	call	mostrarMsj
+	jmp		leerRegistro
+
 errAbrir:
 	mov		dx,msjErrAbrir
 	call	mostrarMsj
