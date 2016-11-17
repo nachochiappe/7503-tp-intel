@@ -23,12 +23,12 @@ segment datos data
 	mes				resb	1
 	anio			resw	1
 
-	fHandle	resb	1
+	fHandle			resb	2
 
 	;Mensajes
 
-	msjAnioInvalido	db	"El anio es mayor a 99",10,13,"$"
-	msjDiaInvalido	db	"El día es mayor a 366",10,13,"$"
+	msjAnioInvalido	db	"Error: anio es mayor a 99",10,13,"$"
+	msjDiaInvalido	db	"Error: dia es mayor a 366",10,13,"$"
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
@@ -214,16 +214,17 @@ esTreintaUno:
 	jmp		buscoMes
 	;Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
 encontreMes:
-	;Mostrar por pantalla:
-		;Juliana: AADDDD
-		;Gregoriana: AAAAMMDD
 	;Muestro registro actual (NO TIENE QUE ESTAR EN LA VERSIÓN FINAL)
+	
 	;mov		byte[registro+12],10
 	;mov		byte[registro+13],13
 	;mov		byte[registro+14],'$'
-	;mov		dx,registro
 	;call	mostrarMsj
 
+	;Mostrar por pantalla:
+		;Juliana: AADDDD
+		;Gregoriana: AAAAMMDD
+	
 	;Armo fecha Juliana con formato AADDDD
 armoFechaJul:
 	mov		dx,0		;pongo en 0 DX para la dupla DX:AX
@@ -317,29 +318,6 @@ mostrarFechas:
 ;****************************************;
 ;            RUTINAS INTERNAS            ;
 ;****************************************;
-
-	;Verifico número de empaquetado
-;validoNumero:
-;	cmp		al,30h
-;	jl		empaqNoValido
-;	cmp		al,39h
-;	jg		empaqNoValido
-;	ret
-;
-;	;Verifico letra de empaquetado
-;validoLetra:
-;	cmp		al,41h
-;	jl		empaqNoValido
-;	cmp		al,46h
-;	jg		empaqNoValido
-;	ret
-;
-;empaqNoValido:
-;	mov		dx,registro
-;	call	mostrarMsj
-;	mov		dx,msjErrEmpaq
-;	call	mostrarMsj
-;	jmp		leerRegistro
 
 anioInvalido:
 	mov		dx,msjAnioInvalido
