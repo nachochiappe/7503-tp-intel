@@ -33,7 +33,6 @@ segment datos data
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
 	msjErrLeer		db	"Error al leer archivo",10,13,"$"
 	msjErrCerrar	db	"Error al cerrar archivo",10,13,"$"
-	msjErrEmpaq		db	"Registro no es un empaquetado valido",10,13,"$"
 	msjFin			db	"FIN$"
 
 	msjJuliana		db	"Juliana: $"
@@ -184,7 +183,7 @@ buscoMes:
 	mov		bx,[dia]
 	cmp		bx,[cant_dias]
 		;SI: El número de mes es <cant_meses>. Saltar a encontreMes.
-	jle		encontreMes
+	jle		armoFechaJul
 		;NO: Seguir.
 	;Le resto <cant_dias> a <dia>.
 	mov		ax,[cant_dias]
@@ -230,7 +229,6 @@ esTreintaUno:
 	mov		byte[cant_dias],31
 	jmp		buscoMes
 	;Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
-encontreMes:
 	;Mostrar por pantalla:
 		;Juliana: AADDDD
 		;Gregoriana: AAAAMMDD
