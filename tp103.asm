@@ -27,6 +27,7 @@ segment datos data
 
 	;Mensajes
 
+	msjDatoNegativo	db	"Error: no puede haber valores negativos",10,13,"$"
 	msjAnioInvalido	db	"Error: anio es mayor a 99",10,13,"$"
 	msjDiaInvalido	db	"Error: dia es mayor a 366",10,13,"$"
 	msjErrAbrir		db	"Error al abrir archivo",10,13,"$"
@@ -84,6 +85,22 @@ leerRegistro:
 	cmp		ax,0
 	je		cerrarArch
 
+	;Verifico que no existan valores negativos en el registro
+	mov		cx,2
+	mov		si,1
+datosNegativos:
+	mov		al,byte[registro+si]
+	shl		ax,12
+	shr		ax,4
+	;ahora tengo en ah la letra
+	cmp		ah,0bh
+	je		datoNegativo
+	cmp		ah,0dh
+	je		datoNegativo
+	mov		si,5
+	loop	datosNegativos
+	sub		ah,ah
+
 	;Obtener <anio>
 	mov		al,byte[registro]
 	shl		ax,4
@@ -95,7 +112,7 @@ leerRegistro:
 	;ahora tengo en al la decena
 	mul		byte[decena]
 	add		[anio],ax
-	
+
 	mov		al,byte[registro+1]
 	shr		ax,4
 	;ahora tengo en al la unidad
@@ -103,13 +120,13 @@ leerRegistro:
 
 	mov		ax,[anio_inicial]
 	add		[anio],ax
-	
+
 	;Obtener <dia>
 	sub		ax,ax
 	mov		ax,word[registro+2]
 	cmp		ax,0
 	jg		diaInvalido
-	
+
 	mov		al,byte[registro+4]
 	sub		ah,ah
 	shl		ax,4
@@ -119,24 +136,24 @@ leerRegistro:
 	;ahora tengo en al la centena
 	mul		byte[centena]
 	mov		[dia],ax
-	
+
 	mov		al,bh
 	;ahora tengo en al la decena
 	mul		byte[decena]
 	add		[dia],ax
-	
+
 	mov		al,byte[registro+5]
 	sub		ah,ah
 	shl		ax,4
 	;ahora tengo en ah la unidad
 	add		[dia],ah
-	
+
 	;Verifico que <dia> no sea mayor a 366
 	cmp		word[dia],366
 	jg		diaInvalido
 	mov		ax,[dia]
 	mov		[diaJuliano],ax
-	
+
 	;Verifico si es bisiesto
 	;Dividir <anio> por 4.
 	sub		dx,dx
@@ -214,17 +231,10 @@ esTreintaUno:
 	jmp		buscoMes
 	;Año = <anio_inicial> + <anio>, Mes = <cant_meses>, Día = <dia>
 encontreMes:
-	;Muestro registro actual (NO TIENE QUE ESTAR EN LA VERSIÓN FINAL)
-	
-	;mov		byte[registro+12],10
-	;mov		byte[registro+13],13
-	;mov		byte[registro+14],'$'
-	;call	mostrarMsj
-
 	;Mostrar por pantalla:
 		;Juliana: AADDDD
 		;Gregoriana: AAAAMMDD
-	
+
 	;Armo fecha Juliana con formato AADDDD
 armoFechaJul:
 	mov		dx,0		;pongo en 0 DX para la dupla DX:AX
@@ -234,11 +244,11 @@ armoFechaJul:
 	sub		ax,[anio_inicial]
 	mov		si,1
 	jmp		otraDivJul
-	
+
 armoDiaJul:
 	mov		ax,[diaJuliano]
 	mov		si,5
-	
+
 otraDivJul:
 	div		word[diez]				;DX:AX div 10 ==> DX <- resto & AX <- cociente
 	add		dx,30h					;convierto a ASCII el resto
@@ -264,13 +274,13 @@ finDivJul:
 	sub		bl,bl
 armoFecha:
 	mov		dx,0		;pongo en 0 DX para la dupla DX:AX
-	cmp		bl,1
+	cmp		bl,1		;verifico si ya se armó el día
 	jne		armoMes
 	mov		ax,[anio]	;copio el nro en AX para divisiones sucesivas
 	mov		si,3		;'SI' apunta al ultimo byte de la cadena
 	jmp		otraDiv
 armoMes:
-	cmp		bl,2
+	cmp		bl,2		;verifico si ya se armó el mes
 	jne		armoDia
 	mov		ax,[cant_meses]
 	mov		si,5
@@ -293,7 +303,7 @@ finDiv:
 	add		ax,30h
 	mov		[fechaGregoriana+si],al
 	inc		bl
-	cmp		bl,3
+	cmp		bl,3		;verifico si ya se armó el año
 	jne		armoFecha
 	mov		byte[fechaGregoriana+8],10
 	mov		byte[fechaGregoriana+9],13
@@ -319,11 +329,16 @@ mostrarFechas:
 ;            RUTINAS INTERNAS            ;
 ;****************************************;
 
+datoNegativo:
+		mov		dx,msjDatoNegativo
+		call	mostrarMsj
+		jmp		leerRegistro
+
 anioInvalido:
 	mov		dx,msjAnioInvalido
 	call	mostrarMsj
 	jmp		leerRegistro
-	
+
 diaInvalido:
 	mov		dx,msjDiaInvalido
 	call	mostrarMsj
